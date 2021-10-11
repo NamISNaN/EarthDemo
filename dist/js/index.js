@@ -1686,7 +1686,7 @@ const load = {
         //是否可以缩放
         controls.enableZoom = true;
         //是否自动旋转
-        controls.autoRotate = true;
+        // controls.autoRotate = true;
         //设置相机距离原点的最远距离
         // controls.minDistance  = 200;
         //设置相机距离原点的最远距离
