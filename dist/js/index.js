@@ -1659,26 +1659,41 @@ function lglt2xyz(latitude, longitude, radius) {
 }
 
 
+var controls;
+
 
 const load = {
     init: function () {
         this.initRender();
         this.initCamera();
         this.initScene();
-        this.initControls()
         this.initLight();
         this.initEarth();
         this.initCity();
-        // this.animate()
+        this.initControls()
+        this.animate()
     },
 
+    rotate2Center:function () {
+    console.log('====rotate2Center',controls)
+    return controls
+    },
     initControls:function () {
-        var controls;
         controls = new THREE.OrbitControls( camera, renderer.domElement );
         // 如果使用animate方法时，将此函数删除
-        controls.addEventListener( 'mousedown', (e)=>{
-          console.log('Controls  Change',e)
-        } );
+          //  controls.addEventListener( 'change', (e)=>{ 
+          //   // earthGroup.rotation.x =  e.target.object.rotation.x
+          //   // earthGroup.rotation.x  =  earthGroup.rotation.y +e.target.object.rotation.y
+          //   // earthGroup.rotation.z =  earthGroup.rotation.z +e.target.object.rotation.z
+          //   console.log('Controler改变啦',e,earthGroup.rotation.x ,earthGroup.rotation.x,earthGroup.rotation.z ) 
+          //   renderer.render( scene, camera );} );
+          //还是有问题 考虑是因为control的渲染角度并未带到earth中   
+            // controls.addEventListener( 'end', (e)=>{ 
+            //         earthGroup.rotation.x =   e.target.object.rotation.x
+            // earthGroup.rotation.x  =  e.target.object.rotation.y
+            // earthGroup.rotation.z =  e.target.object.rotation.z
+            //   console.log('渲染结束',e)
+            // })
         // 使动画循环使用时阻尼或自转 意思是否有惯性
         controls.enableDamping = true;
         //动态阻尼系数 就是鼠标拖拽旋转灵敏度
@@ -1693,6 +1708,7 @@ const load = {
         // controls.maxDistance  = 600;
         //是否开启右键拖拽
         // controls.enablePan = true;
+        renderer.render(scene, camera);
     },
 
     initCamera: function () {
@@ -1794,16 +1810,16 @@ const load = {
         scene.add(sun);
         scene.add(light);
     },
-
-//  animate:function() {
-//    const that = this
-//   requestAnimationFrame( that.animate );
-//   controls.update();
-//   renderer.render( scene, camera );
-// }
+    animate:function() {
+        // this.animate()
+        const _that = this
+        requestAnimationFrame( _that.animate );
+        controls.update();
+        renderer.render( scene, camera );
+}
 }
 
-module.exports = load;
+module.exports = load
 
 
 
@@ -1826,22 +1842,25 @@ module.exports = load;
 
 /***/ }),
 /* 13 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
 
 // var transformControls, dragControls, controls;
+var controls = __webpack_require__(12);
+
 var lastX, lastY, isTween, tween, cityLast,
     raycaster = new THREE.Raycaster(),
     mouse = new THREE.Vector2();
 
 function rotate2Center(coord) {
+  console.log('坐标',coord,controls.rotate2Center().object.rotation)
     var lg = THREE.Math.degToRad(coord.lg),
     lt = THREE.Math.degToRad(coord.lt);
     var rotate = {x: lt, y: lg};
+    // 无效注释
     // rotate.x = Math.asin(pos.y / radius);
     // var temp = radius * Math.cos(rotate.x);
     // rotate.y = Math.atan(pos.x/pos.z);
-    
     return rotate;
 }
 
@@ -1871,7 +1890,7 @@ function rotateEarth(intervalX, intervalY) {
         locationGroup.rotation.x = this.rotateX;
     }
     var onComplete = function () {
-        isTween = false;
+        isTween = true;
     }
     tween.onUpdate(onUpdate);
     tween.onComplete(onComplete);
@@ -1887,19 +1906,45 @@ const play = {
         // // document.addEventListener('touchmove',this.touchEnd)
         // //         this.render();
 
-        // // document.addEventListener('touchmove',(event)=>{
-        // //   this.touchStart(event)
-        // //   this.touchEnd(event)
-        // // })
-        // // this.render();
+        // document.addEventListener('touchmove',(event)=>{
+          // this.touchStart(event)
+          // this.touchEnd(event)
+        // })
+        // this.render();
                 // document.addEventListener('mousedown', (e)=>{
                 //   console.log('开始触摸屏幕',e);
                 // });
 
+        document.addEventListener('touchstart', (e)=>{
+          isTween = true
+          console.log('旋转开始',e)
+          // document旋转逻辑
+          // lastX = event.touches[0].clientX;
+          // lastY = event.touches[0].clientY;
+        });
+        this.render()
+        
+        document.addEventListener('touchend', (e)=>{
+          console.log('旋转结束',e)
+          isTween = false
+          // document旋转逻辑
+          // var recX = event.changedTouches[0].clientX;
+          // var recY = event.changedTouches[0].clientY;
+          // var intervalX = (recX - lastX) * .01;
+          // var intervalY = (recY - lastY) * .01;
+          // if (Math.abs(intervalX) < 0.1 && Math.abs(intervalY) < 0.1) return;
+          // // 垂直方向滚动限制
+          // if (earthGroup.rotation.x + intervalY > 1.6) intervalY = (1.6 - earthGroup.rotation.x);
+          // if (earthGroup.rotation.x + intervalY < -1.6) intervalY = (-1.6 - earthGroup.rotation.x);
+          // rotateEarth(intervalY, intervalX);
+          // document旋转逻辑
+
+        });
+        this.render()
+
         //        因为使用了OrbitContro  导致mousedown 失效，因为源码中对event事件进行冒泡组织
         document.addEventListener('pointerdown', this.click,false);
-                    this.render();
-
+        this.render();
         // document.addEventListener('touchend', this.touchEnd);
         // this.render();
         //         document.addEventListener('mousedown', this.click);
@@ -1927,6 +1972,7 @@ const play = {
         rotateEarth(intervalY, intervalX);
     },
     click: function (e) {
+      // this.renderWithoutRote()
       console.log('点击事件触发啦',e)
         e.preventDefault();
         // 鼠标点击位置的屏幕坐标转换成threejs中的标准坐标-1<x<1, -1<y<1
@@ -1939,6 +1985,7 @@ const play = {
         var intersects = raycaster.intersectObjects(locationGroup.children, true);
 
         if (intersects.length > 0) {
+          console.log('有香蕉的')
             if(cityLast) cityLast.scale.set(1, 1, 1);
             // 只取第一个相交物体
             var city = intersects[0].object;
@@ -1958,7 +2005,6 @@ const play = {
                 cityText.className = "showed";
             }, 500)
 
-
             // 旋转到中心
             var cityCoord = city.coord;
             var rotateRad = rotate2Center(cityCoord);
@@ -1970,15 +2016,21 @@ const play = {
                 else finalY += Math.PI*2;
             }
             console.log(rotateRad)
-
             
-            // isTween = false;
-            // rotateRad.x-earthGroup.rotation.x, rotateRad.y-earthGroup.rotation.y
-            rotateEarth(rotateRad.x-earthGroup.rotation.x, finalY-earthGroup.rotation.y);
+            
+            //  this.isTween = true;
+            //  renderer.render(scene, camera);
+            // intervalY, intervalX
+            //需要加上Control的旋转弧度重定位
+            const _rotateX = controls.rotate2Center().object.rotation.x
+            const _rotateY = controls.rotate2Center().object.rotation.y
+            // rotateEarth(earthGroup.rotation.x, -earthGroup.rotation.y);
+            rotateEarth(rotateRad.x-earthGroup.rotation.x+_rotateX, finalY-earthGroup.rotation.y+_rotateY);
+            // rotateEarth(rotateRad.x, finalY-earthGroup.rotation.y);
         }
-
     },
     render: function () {
+      // console.log('进入Render',isTween,earthGroup.rotation.y , locationGroup.rotation.y )
         var earthSpeed = Math.PI/3000;
         var cloudSpeed = 0.0001;
         //自传动画

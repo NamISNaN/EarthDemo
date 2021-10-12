@@ -17,26 +17,41 @@ function lglt2xyz(latitude, longitude, radius) {
 }
 
 
+var controls;
+
 
 const load = {
     init: function () {
         this.initRender();
         this.initCamera();
         this.initScene();
-        this.initControls()
         this.initLight();
         this.initEarth();
         this.initCity();
-        // this.animate()
+        this.initControls()
+        this.animate()
     },
 
+    rotate2Center:function () {
+    console.log('====rotate2Center',controls)
+    return controls
+    },
     initControls:function () {
-        var controls;
         controls = new THREE.OrbitControls( camera, renderer.domElement );
         // 如果使用animate方法时，将此函数删除
-        controls.addEventListener( 'mousedown', (e)=>{
-          console.log('Controls  Change',e)
-        } );
+          //  controls.addEventListener( 'change', (e)=>{ 
+          //   // earthGroup.rotation.x =  e.target.object.rotation.x
+          //   // earthGroup.rotation.x  =  earthGroup.rotation.y +e.target.object.rotation.y
+          //   // earthGroup.rotation.z =  earthGroup.rotation.z +e.target.object.rotation.z
+          //   console.log('Controler改变啦',e,earthGroup.rotation.x ,earthGroup.rotation.x,earthGroup.rotation.z ) 
+          //   renderer.render( scene, camera );} );
+          //还是有问题 考虑是因为control的渲染角度并未带到earth中   
+            // controls.addEventListener( 'end', (e)=>{ 
+            //         earthGroup.rotation.x =   e.target.object.rotation.x
+            // earthGroup.rotation.x  =  e.target.object.rotation.y
+            // earthGroup.rotation.z =  e.target.object.rotation.z
+            //   console.log('渲染结束',e)
+            // })
         // 使动画循环使用时阻尼或自转 意思是否有惯性
         controls.enableDamping = true;
         //动态阻尼系数 就是鼠标拖拽旋转灵敏度
@@ -51,6 +66,7 @@ const load = {
         // controls.maxDistance  = 600;
         //是否开启右键拖拽
         // controls.enablePan = true;
+        renderer.render(scene, camera);
     },
 
     initCamera: function () {
@@ -152,16 +168,16 @@ const load = {
         scene.add(sun);
         scene.add(light);
     },
-
-//  animate:function() {
-//    const that = this
-//   requestAnimationFrame( that.animate );
-//   controls.update();
-//   renderer.render( scene, camera );
-// }
+    animate:function() {
+        // this.animate()
+        const _that = this
+        requestAnimationFrame( _that.animate );
+        controls.update();
+        renderer.render( scene, camera );
+}
 }
 
-module.exports = load;
+module.exports = load
 
 
 
