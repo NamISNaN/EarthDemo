@@ -29,6 +29,7 @@
     "whatwg-fetch": "^3.0.0"
   },
   "dependencies": {
-    "three": "^0.133.1"
+    "three": "^0.133.1",
+    "vue": "^2.6.14"
   }
 }

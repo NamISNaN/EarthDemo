@@ -61,7 +61,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 1);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -95,19 +95,223 @@ module.exports = g;
 /* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(2);
+/* WEBPACK VAR INJECTION */(function(global) {/**
+ * 
+ * @param {纬度} latitude 
+ * @param {经度} longitude 
+ * @param {半径} radius 
+ */
+
+function lglt2xyz(latitude, longitude, radius) {
+    var lg = THREE.Math.degToRad(longitude),
+        lt = THREE.Math.degToRad(latitude);
+
+    var y = radius * Math.sin(lt);
+    var temp = radius * Math.cos(lt);
+    var x = temp * Math.sin(lg);
+    var z = temp * Math.cos(lg);
+    return {x:x , y:y ,z:z}
+}
+
+
+var controls;
+
+
+const load = {
+    init: function () {
+        this.initRender();
+        this.initCamera();
+        this.initScene();
+        this.initLight();
+        this.initEarth();
+        this.initCity();
+        this.initControls()
+        this.animate()
+    },
+
+    rotate2Center:function () {
+    console.log('====rotate2Center',controls)
+    return controls
+    },
+    initControls:function () {
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+        // 如果使用animate方法时，将此函数删除
+          //  controls.addEventListener( 'change', (e)=>{ 
+          //   // earthGroup.rotation.x =  e.target.object.rotation.x
+          //   // earthGroup.rotation.x  =  earthGroup.rotation.y +e.target.object.rotation.y
+          //   // earthGroup.rotation.z =  earthGroup.rotation.z +e.target.object.rotation.z
+          //   console.log('Controler改变啦',e,earthGroup.rotation.x ,earthGroup.rotation.x,earthGroup.rotation.z ) 
+          //   renderer.render( scene, camera );} );
+          //还是有问题 考虑是因为control的渲染角度并未带到earth中   
+            // controls.addEventListener( 'end', (e)=>{ 
+            //         earthGroup.rotation.x =   e.target.object.rotation.x
+            // earthGroup.rotation.x  =  e.target.object.rotation.y
+            // earthGroup.rotation.z =  e.target.object.rotation.z
+            //   console.log('渲染结束',e)
+            // })
+        // 使动画循环使用时阻尼或自转 意思是否有惯性
+        controls.enableDamping = true;
+        //动态阻尼系数 就是鼠标拖拽旋转灵敏度
+        controls.dampingFactor = 0.5;
+        //是否可以缩放
+        controls.enableZoom = true;
+        //是否自动旋转
+        // controls.autoRotate = true;
+        //设置相机距离原点的最远距离
+        // controls.minDistance  = 200;
+        //设置相机距离原点的最远距离
+        // controls.maxDistance  = 600;
+        //是否开启右键拖拽
+        // controls.enablePan = true;
+        renderer.render(scene, camera);
+    },
+
+    initCamera: function () {
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 43;
+    },
+
+    initScene: function () {
+        scene = new THREE.Scene();
+        locationGroup = new THREE.Group();
+        // scene背景
+        scene.opacity = 0;
+        scene.transparent = true;
+        scene.add(locationGroup);
+    },
+
+    initRender: function () {
+        if (Detector.webgl)
+            global.renderer = new THREE.WebGLRenderer({
+                alpha: true,
+                antialias: true
+            });
+        else
+            global.renderer = new THREE.CanvasRenderer();
+
+        // global.renderer = new THREE.WebGLRenderer({
+        //     alpha: true,
+        //     antialias: true
+        // });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(window.devicePixelRatio * .8); // 这一行会使得手机端的FPS降低到30
+        renderer.setClearAlpha(0);
+        container.appendChild(renderer.domElement);
+    },
+
+    initEarth: function () {
+        // the earth
+        var textureLoader = new THREE.TextureLoader();
+        var geometry = new THREE.SphereBufferGeometry(earthRadius, 20, 20); /* 几何模型 */
+        var material = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            specular: 0x404040,
+            shininess: 5,
+            transparent: false,
+            opacity: 1,
+            overdraw: 0.5,
+            map: textureLoader.load('../img/earth.jpg'),
+            specularMap: textureLoader.load('../img/earth_spec.jpg'),
+            bumpMap: textureLoader.load('../img/earth_bump.jpg')
+        }); /* 材质 */
+
+        earth = new THREE.Mesh(geometry, material);
+        earth.rotation.y = -(Math.PI/2).toFixed(2);
+        earthGroup = new THREE.Group();
+        earthGroup.add(earth);
+
+        cloud = new THREE.Mesh(
+            new THREE.SphereGeometry(15.5, 24, 24),
+            new THREE.MeshPhongMaterial({
+                map: new THREE.TextureLoader().load('../img/earth_cloud.png'),
+                opacity: .98,
+                transparent: true,
+                blending: 'AdditiveBlending'
+            })
+        );
+        earthGroup.add(cloud);
+        earthGroup.name = "earthGroup";
+
+        scene.add(earthGroup);
+        renderer.render(scene, camera);
+    },
+
+    initCity: function () {
+        LOCATIONS.forEach(location => {
+            let spriteMaterial = new THREE.SpriteMaterial({
+                map: new THREE.TextureLoader().load('../img/location.png'),
+                color: 0xffffff,
+                fog: true
+            })
+            let sprite = new THREE.Sprite(spriteMaterial)
+            let pos = lglt2xyz(location.coord[0], location.coord[1], cityRadius);
+            
+            sprite.position.set(pos.x, pos.y, pos.z)
+            sprite.name = location.name;
+            sprite.coord = {lt: location.coord[0], lg: location.coord[1]};
+            locationGroup.add(sprite)
+        })
+    },
+
+    initLight: function () {
+        var all = new THREE.AmbientLight(0x393939, .8);
+        var light = new THREE.DirectionalLight(0xffffff, 1)
+        light.position.set(-11, 3, 1);
+        var sun = new THREE.SpotLight(0x393939, 2.5);
+        sun.position.set(-15, 10, 21);
+
+        scene.add(all);
+        scene.add(sun);
+        scene.add(light);
+    },
+    animate:function() {
+        // this.animate()
+        const _that = this
+        requestAnimationFrame( _that.animate );
+        controls.update();
+        renderer.render( scene, camera );
+}
+}
+
+module.exports = load
+
+
+
+// var light = new THREE.AmbientLight(0x404040, 1);
+// scene.add(light)
+
+// var listener = new THREE.AudioListener();
+// camera.add(listener);
+// var sound = new THREE.Audio(listener);
+// // scene.add(audio);
+// var musicLoader = new THREE.AudioLoader();
+// musicLoader.load('./audio/bg-song.oog', function (buffer) {
+//         sound.setBuffer(buffer);
+//         sound.play();
+//     },
+//     function (xhr) {
+//         console.log((xhr.loaded / xhr.total * 100) + "% is loaded");
+//     })
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
 __webpack_require__(3);
+__webpack_require__(4);
 
 //start:polyfill
-var Promise = __webpack_require__(4);
+var Promise = __webpack_require__(5);
 if (!window.Promise) {
 	window.Promise = Promise;
 }
-__webpack_require__(10);
+__webpack_require__(11);
 //end:polyfill
 
-__webpack_require__(11);
-var load = __webpack_require__(12);
+__webpack_require__(12);
+var load = __webpack_require__(1);
 var play = __webpack_require__(13);
 
 var Game = {};
@@ -171,12 +375,6 @@ console.log(env)
 
 
 /***/ }),
-/* 2 */
-/***/ (function(module, exports) {
-
-// removed by extract-text-webpack-plugin
-
-/***/ }),
 /* 3 */
 /***/ (function(module, exports) {
 
@@ -184,12 +382,18 @@ console.log(env)
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+/* 5 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* WEBPACK VAR INJECTION */(function(setImmediate) {/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__finally__ = __webpack_require__(8);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__allSettled__ = __webpack_require__(9);
+/* WEBPACK VAR INJECTION */(function(setImmediate) {/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__finally__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__allSettled__ = __webpack_require__(10);
 
 
 
@@ -446,10 +650,10 @@ Promise._unhandledRejectionFn = function _unhandledRejectionFn(err) {
 
 /* harmony default export */ __webpack_exports__["default"] = (Promise);
 
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(5).setImmediate))
+/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(6).setImmediate))
 
 /***/ }),
-/* 5 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var scope = (typeof global !== "undefined" && global) ||
@@ -505,7 +709,7 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(6);
+__webpack_require__(7);
 // On some exotic environments, it's not clear which object `setimmediate` was
 // able to install onto.  Search each possibility in the same order as the
 // `setimmediate` library.
@@ -519,7 +723,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -709,10 +913,10 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
     attachTo.clearImmediate = clearImmediate;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0), __webpack_require__(7)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0), __webpack_require__(8)))
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -902,7 +1106,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -932,7 +1136,7 @@ function finallyConstructor(callback) {
 
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -988,7 +1192,7 @@ function allSettled(arr) {
 
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1606,7 +1810,7 @@ if (!global.fetch) {
 
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {global.camera, global.scene, global.renderer, global.earth, global.cloud, global.earthGroup, global.locationGroup;
@@ -1637,216 +1841,12 @@ global.LOCATIONS = [{
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/* WEBPACK VAR INJECTION */(function(global) {/**
- * 
- * @param {纬度} latitude 
- * @param {经度} longitude 
- * @param {半径} radius 
- */
-
-function lglt2xyz(latitude, longitude, radius) {
-    var lg = THREE.Math.degToRad(longitude),
-        lt = THREE.Math.degToRad(latitude);
-
-    var y = radius * Math.sin(lt);
-    var temp = radius * Math.cos(lt);
-    var x = temp * Math.sin(lg);
-    var z = temp * Math.cos(lg);
-    return {x:x , y:y ,z:z}
-}
-
-
-var controls;
-
-
-const load = {
-    init: function () {
-        this.initRender();
-        this.initCamera();
-        this.initScene();
-        this.initLight();
-        this.initEarth();
-        this.initCity();
-        this.initControls()
-        this.animate()
-    },
-
-    rotate2Center:function () {
-    console.log('====rotate2Center',controls)
-    return controls
-    },
-    initControls:function () {
-        controls = new THREE.OrbitControls( camera, renderer.domElement );
-        // 如果使用animate方法时，将此函数删除
-          //  controls.addEventListener( 'change', (e)=>{ 
-          //   // earthGroup.rotation.x =  e.target.object.rotation.x
-          //   // earthGroup.rotation.x  =  earthGroup.rotation.y +e.target.object.rotation.y
-          //   // earthGroup.rotation.z =  earthGroup.rotation.z +e.target.object.rotation.z
-          //   console.log('Controler改变啦',e,earthGroup.rotation.x ,earthGroup.rotation.x,earthGroup.rotation.z ) 
-          //   renderer.render( scene, camera );} );
-          //还是有问题 考虑是因为control的渲染角度并未带到earth中   
-            // controls.addEventListener( 'end', (e)=>{ 
-            //         earthGroup.rotation.x =   e.target.object.rotation.x
-            // earthGroup.rotation.x  =  e.target.object.rotation.y
-            // earthGroup.rotation.z =  e.target.object.rotation.z
-            //   console.log('渲染结束',e)
-            // })
-        // 使动画循环使用时阻尼或自转 意思是否有惯性
-        controls.enableDamping = true;
-        //动态阻尼系数 就是鼠标拖拽旋转灵敏度
-        controls.dampingFactor = 0.5;
-        //是否可以缩放
-        controls.enableZoom = true;
-        //是否自动旋转
-        // controls.autoRotate = true;
-        //设置相机距离原点的最远距离
-        // controls.minDistance  = 200;
-        //设置相机距离原点的最远距离
-        // controls.maxDistance  = 600;
-        //是否开启右键拖拽
-        // controls.enablePan = true;
-        renderer.render(scene, camera);
-    },
-
-    initCamera: function () {
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 43;
-    },
-
-    initScene: function () {
-        scene = new THREE.Scene();
-        locationGroup = new THREE.Group();
-        // scene背景
-        scene.opacity = 0;
-        scene.transparent = true;
-        scene.add(locationGroup);
-    },
-
-    initRender: function () {
-        if (Detector.webgl)
-            global.renderer = new THREE.WebGLRenderer({
-                alpha: true,
-                antialias: true
-            });
-        else
-            global.renderer = new THREE.CanvasRenderer();
-
-        // global.renderer = new THREE.WebGLRenderer({
-        //     alpha: true,
-        //     antialias: true
-        // });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.setPixelRatio(window.devicePixelRatio * .8); // 这一行会使得手机端的FPS降低到30
-        renderer.setClearAlpha(0);
-        container.appendChild(renderer.domElement);
-    },
-
-    initEarth: function () {
-        // the earth
-        var textureLoader = new THREE.TextureLoader();
-        var geometry = new THREE.SphereBufferGeometry(earthRadius, 20, 20); /* 几何模型 */
-        var material = new THREE.MeshPhongMaterial({
-            color: 0xffffff,
-            specular: 0x404040,
-            shininess: 5,
-            transparent: false,
-            opacity: 1,
-            overdraw: 0.5,
-            map: textureLoader.load('../img/earth.jpg'),
-            specularMap: textureLoader.load('../img/earth_spec.jpg'),
-            bumpMap: textureLoader.load('../img/earth_bump.jpg')
-        }); /* 材质 */
-
-        earth = new THREE.Mesh(geometry, material);
-        earth.rotation.y = -(Math.PI/2).toFixed(2);
-        earthGroup = new THREE.Group();
-        earthGroup.add(earth);
-
-        cloud = new THREE.Mesh(
-            new THREE.SphereGeometry(15.5, 24, 24),
-            new THREE.MeshPhongMaterial({
-                map: new THREE.TextureLoader().load('../img/earth_cloud.png'),
-                opacity: .98,
-                transparent: true,
-                blending: 'AdditiveBlending'
-            })
-        );
-        earthGroup.add(cloud);
-        earthGroup.name = "earthGroup";
-
-        scene.add(earthGroup);
-        renderer.render(scene, camera);
-    },
-
-    initCity: function () {
-        LOCATIONS.forEach(location => {
-            let spriteMaterial = new THREE.SpriteMaterial({
-                map: new THREE.TextureLoader().load('../img/location.png'),
-                color: 0xffffff,
-                fog: true
-            })
-            let sprite = new THREE.Sprite(spriteMaterial)
-            let pos = lglt2xyz(location.coord[0], location.coord[1], cityRadius);
-            
-            sprite.position.set(pos.x, pos.y, pos.z)
-            sprite.name = location.name;
-            sprite.coord = {lt: location.coord[0], lg: location.coord[1]};
-            locationGroup.add(sprite)
-        })
-    },
-
-    initLight: function () {
-        var all = new THREE.AmbientLight(0x393939, .8);
-        var light = new THREE.DirectionalLight(0xffffff, 1)
-        light.position.set(-11, 3, 1);
-        var sun = new THREE.SpotLight(0x393939, 2.5);
-        sun.position.set(-15, 10, 21);
-
-        scene.add(all);
-        scene.add(sun);
-        scene.add(light);
-    },
-    animate:function() {
-        // this.animate()
-        const _that = this
-        requestAnimationFrame( _that.animate );
-        controls.update();
-        renderer.render( scene, camera );
-}
-}
-
-module.exports = load
-
-
-
-// var light = new THREE.AmbientLight(0x404040, 1);
-// scene.add(light)
-
-// var listener = new THREE.AudioListener();
-// camera.add(listener);
-// var sound = new THREE.Audio(listener);
-// // scene.add(audio);
-// var musicLoader = new THREE.AudioLoader();
-// musicLoader.load('./audio/bg-song.oog', function (buffer) {
-//         sound.setBuffer(buffer);
-//         sound.play();
-//     },
-//     function (xhr) {
-//         console.log((xhr.loaded / xhr.total * 100) + "% is loaded");
-//     })
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
 /* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
 // var transformControls, dragControls, controls;
-var controls = __webpack_require__(12);
+var controls = __webpack_require__(1);
 
 var lastX, lastY, isTween, tween, cityLast,
     raycaster = new THREE.Raycaster(),
@@ -1893,6 +1893,7 @@ function rotateEarth(intervalX, intervalY) {
         isTween = true;
     }
     tween.onUpdate(onUpdate);
+    // earthGroup.scale.set(1.5,1.5,1.5)
     tween.onComplete(onComplete);
     tween.start();
 }
@@ -1993,6 +1994,7 @@ const play = {
             // 放大
             city.scale.set(1.5, 1.5, 1.5);
 
+
             // 显示城市名
             var cityName = city.name;
             var cityText = document.getElementById("cityName");
@@ -2024,8 +2026,15 @@ const play = {
             //需要加上Control的旋转弧度重定位
             const _rotateX = controls.rotate2Center().object.rotation.x
             const _rotateY = controls.rotate2Center().object.rotation.y
+            console.log('====发送PostMsg请求信息===',city,)
+            window.parent.postMessage({
+              type:'selectCity',
+              cityName:cityName,
+              coord:cityCoord
+            }, '*');
             // rotateEarth(earthGroup.rotation.x, -earthGroup.rotation.y);
             rotateEarth(rotateRad.x-earthGroup.rotation.x+_rotateX, finalY-earthGroup.rotation.y+_rotateY);
+
             // rotateEarth(rotateRad.x, finalY-earthGroup.rotation.y);
         }
     },
